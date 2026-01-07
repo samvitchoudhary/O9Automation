@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O9 Platform - Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="logo">O9 Platform</div>
+        <div class="user-info">
+            <span id="username-display">testuser</span>
+            <button onclick="handleLogout()" class="btn-secondary">Logout</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <nav class="sidebar">
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" onclick="toggleSubmenu(event, 'demand-analyst')">
+                        <span>Demand Analyst</span>
+                    </a>
+                    <ul id="demand-analyst" class="submenu">
+                        <li><a href="#" onclick="toggleSubmenu(event, 'system-forecast')">System Forecast</a>
+                            <ul id="system-forecast" class="submenu">
+                                <li><a href="#" onclick="toggleSubmenu(event, 'generate-forecast')">Generate Forecast</a>
+                                    <ul id="generate-forecast" class="submenu">
+                                        <li><a href="forecast.html">Details</a></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                
+                <li class="nav-item">
+                    <a href="#" onclick="toggleSubmenu(event, 'supply-planning')">
+                        <span>Supply Master Planning</span>
+                    </a>
+                    <ul id="supply-planning" class="submenu">
+                        <li><a href="#" onclick="toggleSubmenu(event, 'manage-network')">Manage Network</a>
+                            <ul id="manage-network" class="submenu">
+                                <li><a href="#" onclick="toggleSubmenu(event, 'manufacturing-network')">Manufacturing Network</a>
+                                    <ul id="manufacturing-network" class="submenu">
+                                        <li><a href="bom-setup.html">BOM Setup</a></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                
+                <li class="nav-item">
+                    <a href="#" onclick="toggleSubmenu(event, 'inventory-planning')">
+                        <span>Inventory Planning</span>
+                    </a>
+                    <ul id="inventory-planning" class="submenu">
+                        <li><a href="#">Analysis</a></li>
+                        <li><a href="#">Reports</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+        
+        <main class="main-content">
+            <h1>Welcome to O9 Platform</h1>
+            <p>Navigate using the menu on the left to access different modules.</p>
+            
+            <div class="dashboard-widgets">
+                <div class="widget">
+                    <h3>Demand Planning</h3>
+                    <p>Forecast accuracy: 87%</p>
+                </div>
+                
+                <div class="widget">
+                    <h3>Supply Planning</h3>
+                    <p>Active orders: 1,234</p>
+                </div>
+                
+                <div class="widget">
+                    <h3>Inventory</h3>
+                    <p>Stock level: Optimal</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="js/app.js"></script>
+</body>
+</html>
+

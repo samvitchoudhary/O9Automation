@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O9 Platform - BOM Setup</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="logo">O9 Platform</div>
+        <div class="user-info">
+            <span id="username-display">testuser</span>
+            <button onclick="handleLogout()" class="btn-secondary">Logout</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <nav class="sidebar">
+            <ul class="nav-menu">
+                <li><a href="dashboard.html">← Back to Dashboard</a></li>
+                <li class="nav-item">
+                    <a href="#" onclick="toggleSubmenu(event, 'supply-planning')">
+                        <span>Supply Master Planning</span>
+                    </a>
+                    <ul id="supply-planning" class="submenu">
+                        <li><a href="#" onclick="toggleSubmenu(event, 'manage-network')">Manage Network</a>
+                            <ul id="manage-network" class="submenu">
+                                <li><a href="#" onclick="toggleSubmenu(event, 'manufacturing-network')">Manufacturing Network</a>
+                                    <ul id="manufacturing-network" class="submenu active">
+                                        <li><a href="bom-setup.html">BOM Setup</a></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+        
+        <main class="main-content">
+            <h1>BOM Setup</h1>
+            
+            <!-- Global Filters -->
+            <div class="scope-filters">
+                <h3>Global Filters</h3>
+                <div class="filter-grid">
+                    <div class="filter-item">
+                        <label for="version-bom">Version</label>
+                        <select id="version-bom" name="version">
+                            <option value="current">CurrentWorkingView</option>
+                            <option value="baseline">Baseline</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="item">Item</label>
+                        <input type="text" id="item" placeholder="Enter item IDs...">
+                    </div>
+                </div>
+                
+                <button class="btn-primary" onclick="loadBOMData()">Load</button>
+            </div>
+            
+            <!-- BOM Table -->
+            <div class="bom-table-container">
+                <h3>Produced Items</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Item ID</th>
+                            <th>Description</th>
+                            <th>Location</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="produced-items">
+                        <tr>
+                            <td>440000849200</td>
+                            <td>Product A</td>
+                            <td>Plant 001</td>
+                            <td><button class="btn-link" onclick="showConsumedItems('440000849200')">🔗 View Consumed</button></td>
+                        </tr>
+                        <tr>
+                            <td>440000870300</td>
+                            <td>Product B</td>
+                            <td>Plant 002</td>
+                            <td><button class="btn-link" onclick="showConsumedItems('440000870300')">🔗 View Consumed</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3 style="margin-top: 30px;">Consumed Items</h3>
+                <div id="consumed-items" class="consumed-items-section">
+                    <p>Click the link icon in the Actions column to view consumed items.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="js/app.js"></script>
+</body>
+</html>
+
