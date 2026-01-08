@@ -203,7 +203,7 @@ async def handle_execute_selenium(data: dict, websocket: WebSocket, db: Session)
 
 
 async def handle_execute_step(websocket: WebSocket, step_id: int, db: Session):
-    """Execute a single test step via WebSocket"""
+    """Execute a single test step via WebSocket - automatically prepends Step 1 (login) for all steps except Step 1 itself"""
     try:
         # Load step from database
         step = db.query(TestStep).filter(TestStep.id == step_id).first()
@@ -211,27 +211,24 @@ async def handle_execute_step(websocket: WebSocket, step_id: int, db: Session):
             await websocket.send_json({'type': 'execution_error', 'error': 'Step not found'})
             return
         
+        # Get Step 1 (login step) from the same test case
+        step_1 = db.query(TestStep).filter(
+            TestStep.test_case_id == step.test_case_id,
+            TestStep.step_number == 1
+        ).first()
+        
+        if not step_1:
+            logger.warning(f"Step 1 (login) not found for test case {step.test_case_id}")
+            # Continue without auto-login if Step 1 doesn't exist
+        
         # Update status to running
         step.execution_status = ExecutionStatus.RUNNING
         db.commit()
-        await websocket.send_json({
-            'type': 'status_update',
-            'step_id': step_id,
-            'status': 'running'
-        })
-        
-        # Get executor
-        executor = get_executor()
-        
-        # Initialize browser if not already initialized
-        if not executor.driver or not executor.session_active:
-            await websocket.send_json({'type': 'progress', 'message': 'Initializing browser...'})
-            executor.initialize_browser()
         
         # CRITICAL: Verify we have JSON commands (not Python script)
         import logging
         logger = logging.getLogger(__name__)
-        logger.info(f"=== EXECUTE STEP {step_id} REQUEST ===")
+        logger.info(f"=== EXECUTE STEP {step_id} (Step {step.step_number}) REQUEST ===")
         
         if not step.selenium_script_json:
             logger.error(f"Step {step_id} has no JSON script!")
@@ -242,13 +239,64 @@ async def handle_execute_step(websocket: WebSocket, step_id: int, db: Session):
             })
             return
         
-        # CRITICAL CHECK: Verify it's valid JSON and not Python code
+        # Parse Step 1 commands (if available)
+        step_1_commands = []
+        if step_1 and step_1.selenium_script_json:
+            try:
+                step_1_commands = json.loads(step_1.selenium_script_json)
+                if not isinstance(step_1_commands, list):
+                    step_1_commands = []
+            except:
+                step_1_commands = []
+        
+        # Parse target step commands
         try:
-            commands = json.loads(step.selenium_script_json)
-            if not isinstance(commands, list):
+            target_commands = json.loads(step.selenium_script_json)
+            if not isinstance(target_commands, list):
                 raise ValueError("JSON script must be an array of commands")
             
-            logger.info(f"Step {step_id} has {len(commands)} JSON commands")
+            # Determine which commands to execute
+            if step.step_number == 1:
+                # If this IS Step 1, just run it normally
+                commands = target_commands
+                logger.info(f"Step 1 (Login) - Executing {len(commands)} commands")
+                await websocket.send_json({
+                    'type': 'status_update',
+                    'step_id': step_id,
+                    'status': 'running',
+                    'message': 'Executing Step 1 (Login)...'
+                })
+            else:
+                # For any other step, prepend Step 1 commands
+                if step_1_commands:
+                    commands = step_1_commands.copy()
+                    # Add a separator wait
+                    commands.append({
+                        "action": "wait",
+                        "duration": 1,
+                        "description": f"--- Login complete, now executing Step {step.step_number} ---"
+                    })
+                    # Add target step commands
+                    commands.extend(target_commands)
+                    logger.info(f"Step {step.step_number} - Executing Step 1 ({len(step_1_commands)} commands) + Step {step.step_number} ({len(target_commands)} commands) = {len(commands)} total")
+                    await websocket.send_json({
+                        'type': 'status_update',
+                        'step_id': step_id,
+                        'status': 'running',
+                        'message': f'Executing Step 1 (Login) + Step {step.step_number}...'
+                    })
+                else:
+                    # No Step 1 found, just run target step
+                    commands = target_commands
+                    logger.info(f"Step {step.step_number} - No Step 1 found, executing {len(commands)} commands only")
+                    await websocket.send_json({
+                        'type': 'status_update',
+                        'step_id': step_id,
+                        'status': 'running',
+                        'message': f'Executing Step {step.step_number}...'
+                    })
+            
+            logger.info(f"Total commands to execute: {len(commands)}")
             
             # SECURITY CHECK: Ensure it's not Python code
             script_lower = step.selenium_script_json.lower()
@@ -265,7 +313,7 @@ async def handle_execute_step(websocket: WebSocket, step_id: int, db: Session):
                         f"The Python script is for display only."
                     )
             
-            # VALIDATION: All items must be dicts with 'action' key
+            # VALIDATION: All items must be dicts with 'action' key (validate final commands array)
             for idx, cmd in enumerate(commands):
                 if not isinstance(cmd, dict):
                     raise ValueError(
