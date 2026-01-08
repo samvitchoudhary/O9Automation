@@ -93,3 +93,9 @@ chromedriver*
 # backend/fix_*.py
 # backend/diagnose_*.py
 
+
+# Screenshots
+backend/screenshots/
+*.png
+*.jpg
+*.jpeg
