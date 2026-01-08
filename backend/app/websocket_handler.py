@@ -176,13 +176,30 @@ async def handle_execute_selenium(data: dict, websocket: WebSocket, db: Session)
         
         db.commit()
         
+        # Prepare completion message
+        completion_message = result.get('message', '')
+        if result.get('browser_open'):
+            completion_message += f" Browser is open at: {result.get('current_url', 'N/A')}. Run another step to close it and start fresh."
+        
         await websocket.send_json({
             'type': 'execution_complete',
             'step_id': step_id,
             'status': result['status'],
-            'message': result.get('message', ''),
-            'screenshot': result.get('screenshot')
+            'message': completion_message,
+            'screenshot': result.get('screenshot'),
+            'browser_open': result.get('browser_open', False),
+            'current_url': result.get('current_url')
         })
+        
+        # Log browser status
+        if result.get('browser_open'):
+            logger.info(f"✓ Step {step_id} complete - Browser remains open at {result.get('current_url')}")
+            print(f"\n{'='*60}")
+            print(f"✓ Step {step_id} execution complete")
+            print(f"✓ Browser is still open at: {result.get('current_url', 'N/A')}")
+            print(f"  Users can now interact with the website manually")
+            print(f"  Running another step will close this browser and start fresh")
+            print(f"{'='*60}\n")
         
     except Exception as e:
         print(f"Error executing Selenium test: {e}")

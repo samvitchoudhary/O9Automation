@@ -9,6 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 import asyncio
 import logging
 
@@ -17,6 +18,29 @@ logger = logging.getLogger(__name__)
 
 class SeleniumService:
     """Service for executing Selenium JSON commands"""
+    
+    # Class-level storage for browser instance (shared across all instances)
+    _driver: Optional[webdriver.Chrome] = None
+    _session_active: bool = False
+    
+    def __init__(self):
+        """Initialize SeleniumService - browser instance is shared at class level"""
+        pass
+    
+    def _close_existing_browser(self):
+        """Close any existing browser session before starting a new one"""
+        if SeleniumService._driver is not None:
+            try:
+                print("\n" + "="*60)
+                print("Closing existing browser session...")
+                print("="*60)
+                SeleniumService._driver.quit()
+                print("✓ Previous browser closed")
+            except Exception as e:
+                print(f"Error closing previous browser: {e}")
+            finally:
+                SeleniumService._driver = None
+                SeleniumService._session_active = False
     
     async def execute_commands(self, commands: list, step_id: int, websocket=None) -> dict:
         """
@@ -30,9 +54,9 @@ class SeleniumService:
         Returns:
             dict: Execution result with status, logs, screenshot
         """
-        driver = None
         logs = []
         screenshot_path = None
+        driver = None  # Will be set to class-level driver
         
         try:
             # VALIDATION: Ensure we have a list of commands
@@ -69,6 +93,9 @@ class SeleniumService:
             logs.append(f"Timestamp: {datetime.now().isoformat()}")
             logs.append("")
             
+            # Close existing browser if one is open (new step = fresh browser)
+            self._close_existing_browser()
+            
             # Initialize WebDriver
             options = Options()
             options.add_argument('--no-sandbox')
@@ -76,15 +103,28 @@ class SeleniumService:
             options.add_argument('--disable-blink-features=AutomationControlled')
             options.add_argument('--start-maximized')
             
-            # Don't use headless for debugging
-            # options.add_argument('--headless')
+            # IMPORTANT: Browser runs in VISIBLE mode so users can interact
+            # Don't use headless - users need to see and interact with the browser
+            # options.add_argument('--headless')  # COMMENTED OUT
+            
+            # Disable automation flags for more natural browser appearance
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
             
             driver = webdriver.Chrome(options=options)
             driver.set_page_load_timeout(30)
             driver.implicitly_wait(10)
             
-            logs.append("✓ WebDriver initialized")
-            print("✓ WebDriver initialized")
+            # Store driver at class level so it persists after execution
+            SeleniumService._driver = driver
+            SeleniumService._session_active = True
+            
+            # Use class-level driver for all operations
+            driver = SeleniumService._driver
+            
+            logs.append("✓ WebDriver initialized (visible mode)")
+            print("✓ WebDriver initialized (visible mode)")
+            print("  Browser will remain open after execution for manual interaction")
             
             # Send initialization update
             if websocket:
@@ -158,42 +198,62 @@ class SeleniumService:
             logs.append("\n=== Execution Complete ===")
             logs.append("Status: PASSED")
             logs.append(f"Executed {len(commands)} commands successfully")
+            logs.append("Browser remains open for manual interaction")
+            
+            # Get current URL from class-level driver
+            current_url = None
+            if SeleniumService._driver:
+                try:
+                    current_url = SeleniumService._driver.current_url
+                except:
+                    pass
             
             print(f"\n✓ All commands executed successfully!")
+            print(f"{'='*60}")
+            print(f"✓ Browser is STILL OPEN - you can interact with it manually")
+            print(f"  Current URL: {current_url or 'N/A'}")
+            print(f"  Browser will close when next step is executed")
             print(f"{'='*60}\n")
             
             return {
                 'status': 'passed',
-                'message': f'Successfully executed {len(commands)} commands',
+                'message': f'Successfully executed {len(commands)} commands. Browser remains open for manual interaction.',
                 'logs': '\n'.join(logs),
-                'screenshot': screenshot_path
+                'screenshot': screenshot_path,
+                'browser_open': True,
+                'current_url': current_url
             }
             
         except Exception as e:
             error_msg = f"Execution error: {str(e)}"
             logs.append(f"\n✗ {error_msg}")
+            logs.append("Browser remains open for debugging")
             print(f"\n✗ {error_msg}")
+            print(f"Browser remains open for debugging")
             import traceback
             traceback.print_exc()
             
-            if driver:
-                screenshot_path = self._take_screenshot(driver, step_id, 'error')
+            # Get current URL from class-level driver
+            current_url = None
+            if SeleniumService._driver:
+                try:
+                    screenshot_path = self._take_screenshot(SeleniumService._driver, step_id, 'error')
+                    current_url = SeleniumService._driver.current_url
+                except:
+                    pass
             
             return {
                 'status': 'failed',
-                'message': error_msg,
+                'message': f'{error_msg}. Browser remains open for debugging.',
                 'logs': '\n'.join(logs),
-                'screenshot': screenshot_path
+                'screenshot': screenshot_path,
+                'browser_open': True,
+                'current_url': current_url
             }
             
-        finally:
-            if driver:
-                try:
-                    driver.quit()
-                    logs.append("\n✓ WebDriver closed")
-                    print("✓ WebDriver closed")
-                except:
-                    pass
+        # IMPORTANT: Do NOT close browser in finally block
+        # Browser stays open so users can interact with it
+        # Browser will close when next step starts (via _close_existing_browser)
     
     async def _execute_single_command(self, driver: webdriver.Chrome, command: dict) -> str:
         """

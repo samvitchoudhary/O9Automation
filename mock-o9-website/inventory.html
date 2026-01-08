@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O9 Platform - Inventory Management</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="logo">O9 Platform</div>
+        <div class="user-info">
+            <span id="username-display">testuser</span>
+            <button onclick="handleLogout()" class="btn-secondary">Logout</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <nav class="sidebar">
+            <ul class="nav-menu">
+                <li><a href="dashboard.html">← Back to Dashboard</a></li>
+            </ul>
+        </nav>
+        
+        <main class="main-content">
+            <h1>Inventory Management</h1>
+            
+            <!-- Global Filters -->
+            <div class="scope-filters">
+                <h3>Inventory Filters</h3>
+                <div class="filter-grid">
+                    <div class="filter-item">
+                        <label for="warehouse">Warehouse</label>
+                        <select id="warehouse" onchange="filterInventory()">
+                            <option value="">All Warehouses</option>
+                            <option value="WH-001">Warehouse 001 - New York</option>
+                            <option value="WH-002">Warehouse 002 - Los Angeles</option>
+                            <option value="WH-003">Warehouse 003 - Chicago</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="inventory-status">Status</label>
+                        <select id="inventory-status" onchange="filterInventory()">
+                            <option value="">All Status</option>
+                            <option value="in-stock">In Stock</option>
+                            <option value="low-stock">Low Stock</option>
+                            <option value="out-of-stock">Out of Stock</option>
+                            <option value="overstocked">Overstocked</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="product-category">Category</label>
+                        <select id="product-category" onchange="filterInventory()">
+                            <option value="">All Categories</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="food">Food & Beverage</option>
+                            <option value="apparel">Apparel</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button class="btn-primary" onclick="applyInventoryFilters()">Apply Filters</button>
+                <button class="btn-secondary" onclick="resetFilters()">Reset</button>
+            </div>
+            
+            <!-- Inventory Summary Cards -->
+            <div class="kpi-cards">
+                <div class="kpi-card">
+                    <h3>Total Items</h3>
+                    <div class="kpi-value">1,247</div>
+                    <div class="kpi-subtitle">Across all locations</div>
+                </div>
+                
+                <div class="kpi-card">
+                    <h3>Total Value</h3>
+                    <div class="kpi-value">$2.4M</div>
+                    <div class="kpi-subtitle">Current inventory worth</div>
+                </div>
+                
+                <div class="kpi-card warning">
+                    <h3>Low Stock Alerts</h3>
+                    <div class="kpi-value">23</div>
+                    <div class="kpi-subtitle">Items below reorder point</div>
+                </div>
+                
+                <div class="kpi-card danger">
+                    <h3>Out of Stock</h3>
+                    <div class="kpi-value">7</div>
+                    <div class="kpi-subtitle">Items requiring immediate action</div>
+                </div>
+            </div>
+            
+            <!-- Inventory Table -->
+            <div class="widget" style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3>Inventory Details</h3>
+                    <div>
+                        <button class="btn-secondary" onclick="downloadReport()">Download Report</button>
+                        <button class="btn-primary" onclick="openBulkUpdate()">Bulk Update</button>
+                    </div>
+                </div>
+                
+                <table class="data-table" id="inventory-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" onclick="selectAll(this)"></th>
+                            <th>SKU</th>
+                            <th>Product Name</th>
+                            <th>Warehouse</th>
+                            <th>On Hand</th>
+                            <th>Reorder Point</th>
+                            <th>Safety Stock</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="checkbox" class="row-checkbox"></td>
+                            <td>SKU-001</td>
+                            <td>Product Alpha</td>
+                            <td>WH-001</td>
+                            <td>850</td>
+                            <td>500</td>
+                            <td>200</td>
+                            <td><span class="status-badge status-success">In Stock</span></td>
+                            <td>
+                                <button class="btn-link" onclick="editItem('SKU-001')">Edit</button>
+                                <button class="btn-link" onclick="viewHistory('SKU-001')">History</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" class="row-checkbox"></td>
+                            <td>SKU-002</td>
+                            <td>Product Beta</td>
+                            <td>WH-002</td>
+                            <td>180</td>
+                            <td>300</td>
+                            <td>150</td>
+                            <td><span class="status-badge status-warning">Low Stock</span></td>
+                            <td>
+                                <button class="btn-link" onclick="editItem('SKU-002')">Edit</button>
+                                <button class="btn-link" onclick="viewHistory('SKU-002')">History</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" class="row-checkbox"></td>
+                            <td>SKU-003</td>
+                            <td>Product Gamma</td>
+                            <td>WH-001</td>
+                            <td>0</td>
+                            <td>400</td>
+                            <td>100</td>
+                            <td><span class="status-badge status-danger">Out of Stock</span></td>
+                            <td>
+                                <button class="btn-link" onclick="editItem('SKU-003')">Edit</button>
+                                <button class="btn-link" onclick="viewHistory('SKU-003')">History</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" class="row-checkbox"></td>
+                            <td>SKU-004</td>
+                            <td>Product Delta</td>
+                            <td>WH-003</td>
+                            <td>2,500</td>
+                            <td>800</td>
+                            <td>300</td>
+                            <td><span class="status-badge status-info">Overstocked</span></td>
+                            <td>
+                                <button class="btn-link" onclick="editItem('SKU-004')">Edit</button>
+                                <button class="btn-link" onclick="viewHistory('SKU-004')">History</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+    
+    <script src="js/app.js"></script>
+    <script src="js/inventory.js"></script>
+</body>
+</html>

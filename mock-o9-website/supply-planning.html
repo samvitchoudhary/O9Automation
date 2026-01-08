@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O9 Platform - Supply Planning</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="logo">O9 Platform</div>
+        <div class="user-info">
+            <span id="username-display">testuser</span>
+            <button onclick="handleLogout()" class="btn-secondary">Logout</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <nav class="sidebar">
+            <ul class="nav-menu">
+                <li><a href="dashboard.html">← Back to Dashboard</a></li>
+            </ul>
+        </nav>
+        
+        <main class="main-content">
+            <h1>Supply Planning - Production Schedule</h1>
+            
+            <!-- Planning Horizon Selector -->
+            <div class="scope-filters">
+                <h3>Planning Parameters</h3>
+                <div class="filter-grid">
+                    <div class="filter-item">
+                        <label for="planning-horizon">Planning Horizon</label>
+                        <select id="planning-horizon">
+                            <option value="1-week">1 Week</option>
+                            <option value="2-weeks">2 Weeks</option>
+                            <option value="1-month" selected>1 Month</option>
+                            <option value="3-months">3 Months</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="plant">Manufacturing Plant</label>
+                        <select id="plant">
+                            <option value="">All Plants</option>
+                            <option value="PLANT-001">Plant 001 - Texas</option>
+                            <option value="PLANT-002">Plant 002 - Ohio</option>
+                            <option value="PLANT-003">Plant 003 - California</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="production-line">Production Line</label>
+                        <select id="production-line">
+                            <option value="">All Lines</option>
+                            <option value="LINE-A">Line A - High Volume</option>
+                            <option value="LINE-B">Line B - Mixed Products</option>
+                            <option value="LINE-C">Line C - Specialty</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button class="btn-primary" onclick="generatePlan()">Generate Plan</button>
+                <button class="btn-secondary" onclick="optimizePlan()">Optimize</button>
+            </div>
+            
+            <!-- Capacity Overview -->
+            <div class="kpi-cards">
+                <div class="kpi-card">
+                    <h3>Planned Production</h3>
+                    <div class="kpi-value">24,500</div>
+                    <div class="kpi-subtitle">Units this week</div>
+                </div>
+                
+                <div class="kpi-card">
+                    <h3>Capacity Utilization</h3>
+                    <div class="kpi-value">78%</div>
+                    <div class="kpi-progress">
+                        <div class="progress-bar" style="width: 78%; background-color: #4CAF50;"></div>
+                    </div>
+                </div>
+                
+                <div class="kpi-card">
+                    <h3>Open Orders</h3>
+                    <div class="kpi-value">145</div>
+                    <div class="kpi-subtitle">Pending fulfillment</div>
+                </div>
+                
+                <div class="kpi-card">
+                    <h3>Late Orders</h3>
+                    <div class="kpi-value">8</div>
+                    <div class="kpi-subtitle">Requires attention</div>
+                </div>
+            </div>
+            
+            <!-- Production Schedule Table -->
+            <div class="widget" style="margin-top: 20px;">
+                <h3>Production Schedule</h3>
+                <table class="data-table" id="production-schedule">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Plant</th>
+                            <th>Line</th>
+                            <th>Start Date</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>PO-1001</td>
+                            <td>Product Alpha</td>
+                            <td>5,000</td>
+                            <td>PLANT-001</td>
+                            <td>LINE-A</td>
+                            <td>2026-01-09</td>
+                            <td>2026-01-15</td>
+                            <td><span class="status-badge status-success">On Track</span></td>
+                            <td><button class="btn-link" onclick="editOrder('PO-1001')">Edit</button></td>
+                        </tr>
+                        <tr>
+                            <td>PO-1002</td>
+                            <td>Product Beta</td>
+                            <td>8,500</td>
+                            <td>PLANT-002</td>
+                            <td>LINE-B</td>
+                            <td>2026-01-10</td>
+                            <td>2026-01-18</td>
+                            <td><span class="status-badge status-warning">At Risk</span></td>
+                            <td><button class="btn-link" onclick="editOrder('PO-1002')">Edit</button></td>
+                        </tr>
+                        <tr>
+                            <td>PO-1003</td>
+                            <td>Product Gamma</td>
+                            <td>3,200</td>
+                            <td>PLANT-001</td>
+                            <td>LINE-C</td>
+                            <td>2026-01-07</td>
+                            <td>2026-01-08</td>
+                            <td><span class="status-badge status-danger">Delayed</span></td>
+                            <td><button class="btn-link" onclick="editOrder('PO-1003')">Edit</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Constraints & Issues -->
+            <div class="widget" style="margin-top: 20px;">
+                <h3>Planning Constraints & Issues</h3>
+                <div class="constraint-list">
+                    <div class="constraint-item warning">
+                        <strong>Material Shortage</strong>
+                        <p>Raw material RM-045 below minimum stock for PO-1002. Expected delivery: 2026-01-12</p>
+                    </div>
+                    
+                    <div class="constraint-item info">
+                        <strong>Capacity Constraint</strong>
+                        <p>LINE-A at 95% capacity for week of Jan 15. Consider load balancing.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="js/app.js"></script>
+    <script src="js/supply-planning.js"></script>
+</body>
+</html>

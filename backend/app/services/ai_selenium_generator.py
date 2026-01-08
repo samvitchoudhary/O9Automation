@@ -304,13 +304,27 @@ Generate the Selenium commands for this step. Return a JSON object with "json_sc
             logger.error(f"Response text: {response_text}")
             raise ValueError(f"AI returned invalid JSON: {str(e)}")
         
-        # Validate response structure
-        if 'json_script' not in result or 'python_script' not in result:
-            logger.error(f"Response missing required fields. Got: {list(result.keys())}")
-            raise ValueError("AI response missing required fields (json_script or python_script)")
+        # Validate response structure - check for both possible field names
+        if 'json_script' not in result and 'selenium_script_json' not in result:
+            logger.error(f"Response missing JSON script field. Got: {list(result.keys())}")
+            raise ValueError("AI response missing JSON script field (expected 'json_script' or 'selenium_script_json')")
+        
+        if 'python_script' not in result and 'selenium_script' not in result:
+            logger.error(f"Response missing Python script field. Got: {list(result.keys())}")
+            raise ValueError("AI response missing Python script field (expected 'python_script' or 'selenium_script')")
+        
+        # Get JSON commands - handle both field name variations
+        json_commands = result.get('json_script') or result.get('selenium_script_json')
+        python_script = result.get('python_script') or result.get('selenium_script', '# Python display code')
+        
+        # If json_commands is a string, parse it
+        if isinstance(json_commands, str):
+            try:
+                json_commands = json.loads(json_commands)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"JSON script field contains invalid JSON: {str(e)}")
         
         # CRITICAL: Verify JSON script for non-login steps doesn't have navigate
-        json_commands = result['json_script']
         if not should_include_navigate and json_commands:
             # Check if first command is navigate
             if json_commands[0].get('action') == 'navigate':
@@ -329,9 +343,25 @@ Generate the Selenium commands for this step. Return a JSON object with "json_sc
         if json_commands:
             logger.info(f"First command: {json_commands[0].get('action')}")
         
+        # Final validation: Ensure no Python code in JSON
+        json_str = json.dumps(json_commands, indent=2).lower()
+        python_indicators = ['import ', 'from ', 'driver = webdriver', 'def ', 'class ', 'webdriver.', 'by.', 'find_element']
+        found_python = [ind for ind in python_indicators if ind in json_str]
+        if found_python:
+            logger.error(f"✗ FATAL: Python code indicators found in JSON: {found_python}")
+            logger.error("This should not happen - JSON should only contain command objects")
+            logger.error(f"JSON preview: {json.dumps(json_commands, indent=2)[:500]}")
+            raise ValueError(f"Generated JSON contains Python code indicators: {found_python}. This is a critical error.")
+        
+        # Final JSON string
+        final_json = json.dumps(json_commands, indent=2)
+        
+        logger.info(f"✓ Final validation passed - JSON is clean")
+        logger.info(f"✓ Returning both formats: Python ({len(python_script)} chars) and JSON ({len(final_json)} chars)")
+        
         return {
-            'selenium_script': result['python_script'],
-            'selenium_script_json': json.dumps(json_commands, indent=2)
+            'selenium_script': python_script,
+            'selenium_script_json': final_json
         }
         
     except ValueError as e:

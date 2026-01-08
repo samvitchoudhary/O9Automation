@@ -490,10 +490,20 @@ async def generate_selenium_for_step(step_id: int, db: Session = Depends(get_db)
             
             # SECURITY CHECK: Ensure it's not Python code
             json_lower = json_script.lower()
-            python_indicators = ['import ', 'from ', 'driver = webdriver', 'def ', 'class ']
+            python_indicators = ['import ', 'from ', 'driver = webdriver', 'def ', 'class ', 'webdriver.', 'by.', 'find_element']
+            found_python = []
             for indicator in python_indicators:
                 if indicator in json_lower:
+                    found_python.append(indicator)
                     logger.warning(f"⚠️  JSON contains Python indicator '{indicator}' - this should not happen")
+            
+            # CRITICAL: If Python code detected, reject the generation
+            if found_python:
+                logger.error(f"✗ FATAL: Python code detected in JSON script! Indicators: {found_python}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"AI generated Python code instead of JSON commands. Please try regenerating. Detected: {', '.join(found_python)}"
+                )
             
         except json.JSONDecodeError as e:
             logger.error(f"Generated JSON is invalid: {e}")
@@ -508,6 +518,21 @@ async def generate_selenium_for_step(step_id: int, db: Session = Depends(get_db)
                 detail=f"Invalid JSON format: {str(e)}"
             )
         
+        # CRITICAL FINAL CHECK: Verify JSON before saving
+        # Double-check that selenium_script_json is actually JSON, not Python
+        final_json_check = scripts['selenium_script_json'].lower()
+        final_python_indicators = ['import ', 'from ', 'driver = webdriver', 'def ', 'class ', 'webdriver.', 'by.']
+        final_found = [ind for ind in final_python_indicators if ind in final_json_check]
+        
+        if final_found:
+            logger.error(f"✗ FATAL: Python code detected in final JSON check! Rejecting save.")
+            logger.error(f"  Indicators found: {final_found}")
+            logger.error(f"  JSON preview: {scripts['selenium_script_json'][:200]}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"CRITICAL: Attempted to save Python code as JSON. This should never happen. Please regenerate."
+            )
+        
         # Update step
         logger.info(f"Updating step in database...")
         step.selenium_script = scripts['selenium_script']  # For display only
@@ -515,6 +540,7 @@ async def generate_selenium_for_step(step_id: int, db: Session = Depends(get_db)
         db.commit()
         db.refresh(step)
         logger.info(f"✓ Scripts saved to database (Python for display, JSON for execution)")
+        logger.info(f"✓ Final validation: JSON is clean, no Python code detected")
         
         # Verify it was saved
         logger.info(f"Verified - DB has script: {bool(step.selenium_script)}, length: {len(step.selenium_script) if step.selenium_script else 0}")
