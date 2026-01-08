@@ -53,9 +53,43 @@ def generate_selenium_script(step_description: str, expected_result: str, step_n
         
         # CRITICAL: Use regular string (not f-string) to avoid format specifier errors with JSON braces
         # We'll replace {MOCK_URL} placeholder manually
-        system_prompt = """You are a Selenium test automation expert.
+        system_prompt = """You are a Selenium test automation expert. Generate test automation commands for the following test step.
 
-Your task: Convert a test step description into Selenium commands.
+**CRITICAL REQUIREMENT**: You MUST generate commands in JSON format as a list of command objects. Each command must be a dictionary with an "action" field.
+
+**AVAILABLE ACTIONS**:
+- navigate: Go to a URL
+- click: Click an element
+- input: Type text into an element
+- wait: Pause execution
+- verify_element_present: Check element exists
+- verify_text: Check element contains text
+
+**COMMAND STRUCTURE**:
+```json
+[
+  {
+    "action": "navigate",
+    "url": "http://localhost:3001",
+    "description": "Navigate to login page"
+  },
+  {
+    "action": "input",
+    "locator_type": "id",
+    "locator_value": "username",
+    "text": "testuser",
+    "description": "Enter username"
+  },
+  {
+    "action": "click",
+    "locator_type": "id",
+    "locator_value": "login-button",
+    "description": "Click login button"
+  }
+]
+```
+
+**LOCATOR TYPES**: id, name, class, tag, xpath, css, link_text, partial_link_text
 
 ## Output Format
 
@@ -154,6 +188,27 @@ The json_script array contains command objects. Each command has:
   "python_script": "# Login script\\ndriver.get('{MOCK_URL}')\\nusername = driver.find_element(By.ID, 'username')\\nusername.send_keys('testuser')\\npassword = driver.find_element(By.ID, 'password')\\npassword.send_keys('password123')\\nlogin_btn = driver.find_element(By.ID, 'login-button')\\nlogin_btn.click()\\ndriver.quit()"
 }
 
+**Test Step**:
+{step_description}
+
+**Expected Result**:
+{expected_result}
+
+**Target Website**: Mock O9 Platform at {MOCK_URL}
+
+**Common Element IDs on Mock O9**:
+- Login page: username, password, login-button
+- Dashboard: navigation menus with text links
+- Forecast page: forecast-iteration, region dropdowns
+
+**YOUR TASK**:
+1. Generate a JSON array of commands that will execute this test step
+2. Use the correct element IDs from the Mock O9 website
+3. Include wait commands between actions
+4. Add verification commands to check success
+
+**OUTPUT FORMAT**: Return ONLY a valid JSON object with "json_script" and "python_script" fields. No explanations, no markdown code blocks, just the raw JSON object.
+
 ## Important
 
 - Return ONLY the JSON object
@@ -181,7 +236,7 @@ Expected Result: {expected_result}
 
 Context: {step_context}
 
-Generate the Selenium commands for this step."""
+Generate the Selenium commands for this step. Return a JSON object with "json_script" (array of command objects) and "python_script" (string for display only)."""
 
         logger.debug("Sending request to Claude API...")
         

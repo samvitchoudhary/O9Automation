@@ -7,7 +7,11 @@ from datetime import datetime
 from app.database import get_db
 from app.models import TestStep, ExecutionStatus
 from app.services.selenium_executor import get_executor
+from app.services.selenium_service import SeleniumService
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ConnectionManager:
@@ -35,6 +39,167 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+
+
+class WebSocketWrapper:
+    """Wrapper to make WebSocket compatible with SeleniumService"""
+    def __init__(self, websocket: WebSocket):
+        self.websocket = websocket
+    
+    async def send_message(self, message: dict):
+        await self.websocket.send_json(message)
+
+
+async def handle_execute_selenium(data: dict, websocket: WebSocket, db: Session):
+    """
+    Execute Selenium test step
+    CRITICAL: This function ONLY executes JSON commands, NEVER Python code
+    """
+    step_id = data.get('step_id')
+    
+    if not step_id:
+        await websocket.send_json({
+            'type': 'selenium_error',
+            'message': 'No step_id provided'
+        })
+        return
+    
+    step = None
+    try:
+        # Get the test step
+        step = db.query(TestStep).filter(TestStep.id == step_id).first()
+        
+        if not step:
+            await websocket.send_json({
+                'type': 'selenium_error',
+                'message': f'Test step {step_id} not found'
+            })
+            return
+        
+        # CRITICAL CHECK 1: Verify JSON script exists
+        if not step.selenium_script_json:
+            await websocket.send_json({
+                'type': 'selenium_error',
+                'message': 'No JSON commands found for this step. Please regenerate the script.'
+            })
+            return
+        
+        # CRITICAL CHECK 2: Validate it's actually JSON
+        try:
+            commands = json.loads(step.selenium_script_json)
+        except json.JSONDecodeError as e:
+            await websocket.send_json({
+                'type': 'selenium_error',
+                'message': f'Invalid JSON in selenium_script_json: {str(e)}'
+            })
+            return
+        
+        # CRITICAL CHECK 3: Verify it's a list
+        if not isinstance(commands, list):
+            await websocket.send_json({
+                'type': 'selenium_error',
+                'message': f'JSON commands must be a list, got {type(commands).__name__}'
+            })
+            return
+        
+        # CRITICAL CHECK 4: Verify commands structure
+        if not commands:
+            await websocket.send_json({
+                'type': 'selenium_error',
+                'message': 'JSON commands list is empty'
+            })
+            return
+        
+        for i, cmd in enumerate(commands):
+            if not isinstance(cmd, dict):
+                await websocket.send_json({
+                    'type': 'selenium_error',
+                    'message': f'Command {i} is not a dictionary, got {type(cmd).__name__}'
+                })
+                return
+            
+            if 'action' not in cmd:
+                await websocket.send_json({
+                    'type': 'selenium_error',
+                    'message': f'Command {i} missing required "action" field'
+                })
+                return
+        
+        # CRITICAL CHECK 5: Detect Python code indicators (should never happen)
+        json_str = step.selenium_script_json.lower()
+        python_indicators = ['import ', 'webdriver.chrome', 'driver = ', 'def ', 'class ', '.quit()']
+        
+        for indicator in python_indicators:
+            if indicator in json_str:
+                await websocket.send_json({
+                    'type': 'selenium_error',
+                    'message': f'FATAL ERROR: Python code detected in JSON field. This should never happen. Please regenerate the script.'
+                })
+                return
+        
+        # Log what we're about to execute
+        print(f"\n{'='*60}")
+        print(f"EXECUTING JSON COMMANDS FOR STEP {step_id}")
+        print(f"Number of commands: {len(commands)}")
+        print(f"First command: {commands[0].get('action')} - {commands[0].get('description', 'N/A')}")
+        print(f"{'='*60}\n")
+        
+        # Update status
+        step.execution_status = ExecutionStatus.RUNNING
+        step.last_executed_at = datetime.now()
+        db.commit()
+        
+        await websocket.send_json({
+            'type': 'execution_started',
+            'step_id': step_id
+        })
+        
+        # Execute commands using SeleniumService
+        selenium_service = SeleniumService()
+        ws_wrapper = WebSocketWrapper(websocket)
+        
+        result = await selenium_service.execute_commands(
+            commands=commands,
+            step_id=step_id,
+            websocket=ws_wrapper
+        )
+        
+        # Update step with results
+        step.execution_status = ExecutionStatus.PASSED if result['status'] == 'passed' else ExecutionStatus.FAILED
+        step.last_executed_at = datetime.now()
+        step.error_message = result.get('message', '') if result['status'] != 'passed' else None
+        
+        # Store logs in error_message if failed, or in a comment
+        if result.get('logs'):
+            if result['status'] != 'passed':
+                step.error_message = result.get('logs', '')
+        
+        db.commit()
+        
+        await websocket.send_json({
+            'type': 'execution_complete',
+            'step_id': step_id,
+            'status': result['status'],
+            'message': result.get('message', ''),
+            'screenshot': result.get('screenshot')
+        })
+        
+    except Exception as e:
+        print(f"Error executing Selenium test: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Update step status
+        if step:
+            step.execution_status = ExecutionStatus.FAILED
+            step.last_executed_at = datetime.now()
+            step.error_message = f"Error: {str(e)}\n{traceback.format_exc()}"
+            db.commit()
+        
+        await websocket.send_json({
+            'type': 'selenium_error',
+            'message': f'Execution failed: {str(e)}'
+        })
 
 
 async def handle_execute_step(websocket: WebSocket, step_id: int, db: Session):
@@ -146,16 +311,16 @@ async def handle_execute_step(websocket: WebSocket, step_id: int, db: Session):
         
         # CRITICAL: Execute the JSON commands, NOT the Python script
         logger.info(f"Executing JSON commands for step {step_id}")
-        result = executor.execute_script(
-            step.selenium_script_json,  # ← JSON commands for execution
-            emit_callback=sync_emit,
-            keep_alive=False  # Close browser after individual step
-        )
         
-        # Send queued updates
-        for update in update_queue:
-            update['step_id'] = step_id
-            await websocket.send_json(update)
+        # Use the new SeleniumService for JSON-only execution
+        selenium_service = SeleniumService()
+        ws_wrapper = WebSocketWrapper(websocket)
+        
+        result = await selenium_service.execute_commands(
+            commands=commands,
+            step_id=step_id,
+            websocket=ws_wrapper
+        )
         
         # Update step in database
         if result['status'] == 'passed':
@@ -166,8 +331,8 @@ async def handle_execute_step(websocket: WebSocket, step_id: int, db: Session):
         else:
             step.execution_status = ExecutionStatus.FAILED
         
-        step.execution_time_ms = result['execution_time_ms']
-        step.error_message = result.get('error_message')
+        step.execution_time_ms = None  # SeleniumService doesn't return this yet
+        step.error_message = result.get('message', '') if result['status'] != 'passed' else None
         step.last_executed_at = datetime.utcnow()
         db.commit()
         
@@ -176,8 +341,8 @@ async def handle_execute_step(websocket: WebSocket, step_id: int, db: Session):
             'type': 'execution_complete',
             'step_id': step_id,
             'status': result['status'],
-            'execution_time_ms': result['execution_time_ms'],
-            'error_message': result.get('error_message')
+            'message': result.get('message', ''),
+            'screenshot': result.get('screenshot')
         })
         
     except Exception as e:

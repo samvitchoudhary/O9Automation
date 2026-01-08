@@ -3,14 +3,49 @@
  */
 import axios from 'axios';
 
+// CRITICAL FIX: Use port 8000 consistently
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+console.log('API Base URL:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 second timeout
 });
+
+// Add request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    return config;
+  },
+  (error) => {
+    console.error('API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for debugging
+api.interceptors.response.use(
+  (response) => {
+    console.log(`API Response: ${response.status} ${response.config.url}`);
+    return response;
+  },
+  (error) => {
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timeout - backend may be slow or not responding');
+    } else if (error.message === 'Network Error') {
+      console.error('Network error - backend may not be running');
+      console.error('Make sure backend is running on', API_BASE_URL);
+    } else {
+      console.error('API Response Error:', error.response?.status, error.message);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Test Cases API
 export const testCasesAPI = {
