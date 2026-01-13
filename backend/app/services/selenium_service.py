@@ -52,9 +52,10 @@ class SeleniumService:
             websocket: WebSocket connection for live updates
         
         Returns:
-            dict: Execution result with status, logs, screenshot
+            dict: Execution result with status, logs
         """
         logs = []
+        # Screenshot functionality disabled
         screenshot_path = None
         driver = None  # Will be set to class-level driver
         
@@ -166,34 +167,33 @@ class SeleniumService:
                     logs.append(f"✓ {result}")
                     print(f"  ✓ {result}")
                     
-                    # Take screenshot after each action
-                    if action in ['click', 'input', 'navigate']:
-                        screenshot_path = self._take_screenshot(driver, step_id, i)
-                        
-                        if screenshot_path and websocket:
-                            await websocket.send_message({
-                                'type': 'screenshot_update',
-                                'step_id': step_id,
-                                'screenshot': screenshot_path
-                            })
+                    # Screenshot functionality disabled
+                    # if action in ['click', 'input', 'navigate']:
+                    #     screenshot_path = self._take_screenshot(driver, step_id, i)
+                    #     if screenshot_path and websocket:
+                    #         await websocket.send_message({
+                    #             'type': 'screenshot_update',
+                    #             'step_id': step_id,
+                    #             'screenshot': screenshot_path
+                    #         })
                     
                 except Exception as e:
                     error_msg = f"✗ Command failed: {str(e)}"
                     logs.append(error_msg)
                     print(f"  {error_msg}")
                     
-                    # Take error screenshot
-                    screenshot_path = self._take_screenshot(driver, step_id, f"error_{i}")
+                    # Screenshot functionality disabled
+                    # screenshot_path = self._take_screenshot(driver, step_id, f"error_{i}")
                     
                     return {
                         'status': 'failed',
                         'message': f'Command {i} failed: {str(e)}',
                         'logs': '\n'.join(logs),
-                        'screenshot': screenshot_path
+                        'screenshot': None
                     }
             
-            # Final screenshot
-            screenshot_path = self._take_screenshot(driver, step_id, 'final')
+            # Screenshot functionality disabled
+            # screenshot_path = self._take_screenshot(driver, step_id, 'final')
             
             logs.append("\n=== Execution Complete ===")
             logs.append("Status: PASSED")
@@ -219,7 +219,7 @@ class SeleniumService:
                 'status': 'passed',
                 'message': f'Successfully executed {len(commands)} commands. Browser remains open for manual interaction.',
                 'logs': '\n'.join(logs),
-                'screenshot': screenshot_path,
+                'screenshot': None,
                 'browser_open': True,
                 'current_url': current_url
             }
@@ -237,7 +237,8 @@ class SeleniumService:
             current_url = None
             if SeleniumService._driver:
                 try:
-                    screenshot_path = self._take_screenshot(SeleniumService._driver, step_id, 'error')
+                    # Screenshot functionality disabled
+                    # screenshot_path = self._take_screenshot(SeleniumService._driver, step_id, 'error')
                     current_url = SeleniumService._driver.current_url
                 except:
                     pass
@@ -246,7 +247,7 @@ class SeleniumService:
                 'status': 'failed',
                 'message': f'{error_msg}. Browser remains open for debugging.',
                 'logs': '\n'.join(logs),
-                'screenshot': screenshot_path,
+                'screenshot': None,  # Screenshot functionality disabled
                 'browser_open': True,
                 'current_url': current_url
             }
@@ -307,8 +308,8 @@ class SeleniumService:
                 raise Exception(f"Text mismatch. Expected: '{expected}', Actual: '{actual}'")
         
         elif action == 'screenshot':
-            # Screenshot will be taken automatically
-            return "Screenshot captured"
+            # Screenshot functionality disabled
+            return "Screenshot action ignored (feature disabled)"
         
         else:
             raise Exception(f"Unknown action: {action}")
@@ -340,18 +341,20 @@ class SeleniumService:
         return wait.until(EC.presence_of_element_located((by_type, locator_value)))
     
     def _take_screenshot(self, driver: webdriver.Chrome, step_id: int, suffix: str = '') -> str:
-        """Take screenshot and save to disk"""
-        try:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f"step_{step_id}_{suffix}_{timestamp}.png"
-            
-            screenshot_dir = Path(__file__).parent.parent.parent / "screenshots"
-            screenshot_dir.mkdir(exist_ok=True)
-            
-            filepath = screenshot_dir / filename
-            driver.save_screenshot(str(filepath))
-            
-            return str(filepath)
-        except Exception as e:
-            print(f"Failed to take screenshot: {e}")
-            return None
+        """Take screenshot and save to disk - DISABLED"""
+        # Screenshot functionality has been disabled
+        return None
+        # try:
+        #     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        #     filename = f"step_{step_id}_{suffix}_{timestamp}.png"
+        #     
+        #     screenshot_dir = Path(__file__).parent.parent.parent / "screenshots"
+        #     screenshot_dir.mkdir(exist_ok=True)
+        #     
+        #     filepath = screenshot_dir / filename
+        #     driver.save_screenshot(str(filepath))
+        #     
+        #     return str(filepath)
+        # except Exception as e:
+        #     print(f"Failed to take screenshot: {e}")
+        #     return None

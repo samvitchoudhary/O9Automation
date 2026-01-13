@@ -13,7 +13,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 second timeout
+  timeout: 180000, // 3 minutes timeout (AI generation can take 30-60 seconds)
 });
 
 // Add request interceptor for debugging
@@ -51,7 +51,10 @@ api.interceptors.response.use(
 export const testCasesAPI = {
   // Generate a new test case from a prompt
   generate: async (prompt) => {
-    const response = await api.post('/api/test-cases/generate', { prompt });
+    // Use longer timeout for test case generation (AI can take 60+ seconds)
+    const response = await api.post('/api/test-cases/generate', { prompt }, {
+      timeout: 180000 // 3 minutes
+    });
     return response.data;
   },
 

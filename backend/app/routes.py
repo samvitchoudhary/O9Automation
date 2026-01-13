@@ -17,7 +17,7 @@ from app.services.ai_service import AIService
 from app.services.excel_service import ExcelService
 from app.services.selenium_service import SeleniumService
 from app.services.ai_selenium_generator import generate_selenium_script as generate_selenium_script_service
-from app.websocket_handler import handle_execute_step, handle_execute_all_steps
+from app.websocket_handler import handle_execute_step, handle_execute_all_steps, handle_generate_test_case
 
 router = APIRouter()
 
@@ -100,15 +100,27 @@ class TestCaseResponse(BaseModel):
         from_attributes = True
 
 
-@router.post("/api/test-cases/generate", response_model=TestCaseResponse)
+@router.post("/api/test-cases/generate")  # Custom response format with success flag
 async def generate_test_case(
     request: GenerateTestCaseRequest,
     db: Session = Depends(get_db)
 ):
     """Generate a test case from a natural language prompt"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
+        logger.info(f"\n{'='*80}")
+        logger.info(f"GENERATING TEST CASE FROM PROMPT")
+        logger.info(f"{'='*80}")
+        logger.info(f"Prompt: {request.prompt[:200]}...")
+        
         # Generate test case using AI
+        logger.info("Calling AI service to generate test case...")
         generated_data = ai_service.generate_test_case(request.prompt)
+        
+        logger.info(f"✓ AI generated test case: {generated_data.get('test_case_name', 'N/A')}")
+        logger.info(f"✓ Steps generated: {len(generated_data.get('steps', []))}")
         
         # Create test case in database
         test_case = TestCase(
@@ -120,7 +132,10 @@ async def generate_test_case(
         db.add(test_case)
         db.flush()  # Get the ID
         
+        logger.info(f"✓ Test case created in database with ID: {test_case.id}")
+        
         # Create test steps
+        steps_created = 0
         for step_data in generated_data.get("steps", []):
             step = TestStep(
                 test_case_id=test_case.id,
@@ -131,14 +146,45 @@ async def generate_test_case(
                 status=TestStepStatus.NOT_STARTED
             )
             db.add(step)
+            steps_created += 1
         
         db.commit()
         db.refresh(test_case)
         
-        return test_case
+        logger.info(f"✓ Committed {steps_created} test steps to database")
+        logger.info(f"\n{'='*80}")
+        logger.info(f"✓ TEST CASE GENERATION COMPLETE")
+        logger.info(f"  Test Case ID: {test_case.id}")
+        logger.info(f"  Name: {test_case.name}")
+        logger.info(f"  Steps: {steps_created}")
+        logger.info(f"  Redirect URL: /test-case/{test_case.id}")
+        logger.info(f"{'='*80}\n")
+        
+        # Return success response with test case data AND success flag
+        return {
+            "success": True,
+            "message": "Test case generated successfully",
+            "test_case_id": test_case.id,
+            "test_case_name": test_case.name,
+            "steps_count": steps_created,
+            "redirect_url": f"/test-case/{test_case.id}",
+            "test_case": {
+                "id": test_case.id,
+                "name": test_case.name,
+                "description": test_case.description,
+                "status": test_case.status.value if hasattr(test_case.status, 'value') else str(test_case.status),
+                "requirements": test_case.requirements,
+                "created_at": test_case.created_at.isoformat() if test_case.created_at else None
+            }
+        }
         
     except Exception as e:
         db.rollback()
+        logger.error(f"\n✗ ERROR GENERATING TEST CASE: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        
+        # Return error response with success flag
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error generating test case: {str(e)}"
@@ -658,6 +704,37 @@ async def websocket_execute_all(websocket: WebSocket, test_case_id: int):
         pass
     except Exception as e:
         await websocket.send_json({'type': 'execution_error', 'error': str(e)})
+    finally:
+        db.close()
+
+
+@router.websocket("/ws/generate-test-case")
+async def websocket_generate_test_case(websocket: WebSocket):
+    """WebSocket endpoint for generating test case with real-time progress"""
+    await websocket.accept()
+    db = next(get_db())
+    
+    try:
+        # Receive description from client
+        data = await websocket.receive_json()
+        description = data.get('description')
+        
+        if not description:
+            await websocket.send_json({
+                'type': 'generation_error',
+                'error': 'Description is required'
+            })
+            return
+        
+        await handle_generate_test_case(websocket, description, db)
+        
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        await websocket.send_json({
+            'type': 'generation_error',
+            'error': f'Error: {str(e)}'
+        })
     finally:
         db.close()
 

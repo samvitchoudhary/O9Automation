@@ -6,7 +6,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const TestStepExecutor = ({ step, onStatusUpdate, onRefresh, testCaseId }) => {
   const [isRunning, setIsRunning] = useState(false);
-  const [screenshot, setScreenshot] = useState(null);
+  // Screenshot functionality disabled
+  // const [screenshot, setScreenshot] = useState(null);
   const [progress, setProgress] = useState('');
   const [showScript, setShowScript] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -41,7 +42,8 @@ const TestStepExecutor = ({ step, onStatusUpdate, onRefresh, testCaseId }) => {
 
   const handleRunStep = () => {
     setIsRunning(true);
-    setScreenshot(null);
+    // Screenshot functionality disabled
+    // setScreenshot(null);
     setProgress('');
 
     // Create WebSocket connection
@@ -61,8 +63,9 @@ const TestStepExecutor = ({ step, onStatusUpdate, onRefresh, testCaseId }) => {
         onStatusUpdate(data.status);
       } else if (data.type === 'progress') {
         setProgress(data.message || data.action || '');
-      } else if (data.type === 'screenshot') {
-        setScreenshot(`data:image/png;base64,${data.image}`);
+      // Screenshot functionality disabled
+      // } else if (data.type === 'screenshot') {
+      //   setScreenshot(`data:image/png;base64,${data.image}`);
       } else if (data.type === 'execution_complete') {
         setIsRunning(false);
         setProgress('');
@@ -494,8 +497,8 @@ const TestStepExecutor = ({ step, onStatusUpdate, onRefresh, testCaseId }) => {
         </div>
       )}
 
-      {/* Live Browser View */}
-      {screenshot && (
+      {/* Screenshot functionality disabled */}
+      {/* {screenshot && (
         <div className="mt-3">
           <p className="text-xs font-semibold text-gray-600 mb-1">Live View:</p>
           <img
@@ -504,7 +507,7 @@ const TestStepExecutor = ({ step, onStatusUpdate, onRefresh, testCaseId }) => {
             className="w-full border rounded max-h-64 object-contain bg-gray-100"
           />
         </div>
-      )}
+      )} */}
 
       {/* Script Editor - Read-only display (only show when not editing) */}
       {showScript && step.selenium_script && !isEditing && (

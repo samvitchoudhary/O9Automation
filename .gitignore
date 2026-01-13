@@ -93,9 +93,13 @@ chromedriver*
 # backend/fix_*.py
 # backend/diagnose_*.py
 
-
-# Screenshots
+# Screenshots - Feature disabled, but keeping in gitignore to prevent accidental commits
+screenshots/
 backend/screenshots/
-*.png
-*.jpg
-*.jpeg
+frontend/public/screenshots/
+*.screenshot.png
+*Screenshot*.png
+# Note: Keeping image extensions commented out in case we need them for other purposes
+# *.png
+# *.jpg
+# *.jpeg
