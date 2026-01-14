@@ -1,0 +1,211 @@
+/* Header Container */
+.app-header {
+  background: linear-gradient(135deg, #5F259F 0%, #3E1F62 100%);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.header-container {
+  max-width: 100%;
+  padding: 16px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+}
+
+/* Logo Section - LEFT - Clickable Link */
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  padding: 8px 12px;
+  margin: -8px -12px; /* Compensate for padding */
+  border-radius: 8px;
+}
+
+.logo-section:hover {
+  opacity: 0.9;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.logo-section:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.logo-section:hover .mondelez-logo {
+  transform: scale(1.02);
+  transition: transform 0.2s;
+}
+
+.mondelez-logo {
+  height: 48px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+  max-width: 250px;
+  transition: transform 0.2s;
+  /* Ensure logo maintains aspect ratio and looks crisp */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Logo Text Fallback (if image fails) */
+.mondelez-logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  padding-right: 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.logo-main {
+  font-size: 16px;
+  font-weight: 900;
+  color: white;
+  line-height: 1.2;
+  letter-spacing: 1px;
+}
+
+.logo-sub {
+  font-size: 8px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 2px;
+}
+
+/* App Info */
+.app-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  line-height: 1.2;
+  transition: color 0.2s;
+}
+
+.logo-section:hover .app-title {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.app-subtitle {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 1.5px;
+}
+
+/* Navigation Actions - RIGHT */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 60px; /* Prevents layout shift when button disappears */
+  justify-content: flex-end;
+}
+
+/* Icon Button */
+.icon-button {
+  width: 48px;
+  height: 48px;
+  background: white;
+  color: #5F259F;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.icon-button:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  background: #f8f8f8;
+}
+
+.icon-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Plus Icon */
+.icon-plus {
+  font-size: 32px;
+  font-weight: 300;
+  line-height: 1;
+  color: #5F259F;
+  display: block;
+}
+
+/* Home Icon */
+.icon-home {
+  font-size: 24px;
+  line-height: 1;
+  display: block;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .header-container {
+    padding: 12px 24px;
+    gap: 24px;
+  }
+
+  .mondelez-logo {
+    height: 40px;
+  }
+
+  .app-title {
+    font-size: 18px;
+  }
+
+  .app-subtitle {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-container {
+    padding: 12px 20px;
+    gap: 20px;
+  }
+
+  .mondelez-logo {
+    height: 36px;
+  }
+
+  .app-title {
+    font-size: 16px;
+  }
+
+  .app-subtitle {
+    font-size: 8px;
+  }
+
+  .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .icon-plus {
+    font-size: 28px;
+  }
+
+  .icon-home {
+    font-size: 22px;
+  }
+}

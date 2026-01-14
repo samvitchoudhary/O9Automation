@@ -17,7 +17,7 @@ from app.services.ai_service import AIService
 from app.services.excel_service import ExcelService
 from app.services.selenium_service import SeleniumService
 from app.services.ai_selenium_generator import generate_selenium_script as generate_selenium_script_service
-from app.websocket_handler import handle_execute_step, handle_execute_all_steps, handle_generate_test_case
+from app.websocket import handle_execute_step, handle_execute_all_steps, handle_generate_test_case
 
 router = APIRouter()
 

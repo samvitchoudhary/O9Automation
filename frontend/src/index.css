@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mondelez Color Variables */
+:root {
+  /* Primary Colors */
+  --mondelez-purple: #5F259F;
+  --mondelez-deep-purple: #3E1F62;
+  --mondelez-blue: #0066B2;
+  
+  /* Secondary Colors */
+  --mondelez-light-purple: #8B5FBF;
+  --mondelez-accent-purple: #9D7BB8;
+  --mondelez-dark-blue: #003B71;
+  
+  /* Neutral Colors */
+  --text-dark: #2D2D2D;
+  --text-gray: #6B6B6B;
+  --bg-light: #F7F7F7;
+  --bg-white: #FFFFFF;
+  
+  /* Gradients */
+  --gradient-purple: linear-gradient(135deg, #5F259F 0%, #8B5FBF 100%);
+  --gradient-blue: linear-gradient(135deg, #0066B2 0%, #003B71 100%);
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -9,6 +32,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-light);
+  color: var(--text-dark);
 }
 
 code {
@@ -16,3 +41,13 @@ code {
     monospace;
 }
 
+/* Mondelez Branded Links */
+a {
+  color: var(--mondelez-purple);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--mondelez-deep-purple);
+  text-decoration: underline;
+}

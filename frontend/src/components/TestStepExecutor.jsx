@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { testStepsAPI } from '../services/api';
+import ViewScriptModal from './ViewScriptModal';
 
 // Get API base URL from environment or use default
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -10,6 +11,7 @@ const TestStepExecutor = ({ step, onStatusUpdate, onRefresh, testCaseId }) => {
   // const [screenshot, setScreenshot] = useState(null);
   const [progress, setProgress] = useState('');
   const [showScript, setShowScript] = useState(false);
+  const [showScriptModal, setShowScriptModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [editedScript, setEditedScript] = useState(step.selenium_script || '');
   const [editedScriptJson, setEditedScriptJson] = useState(step.selenium_script_json || '');
@@ -405,10 +407,10 @@ const TestStepExecutor = ({ step, onStatusUpdate, onRefresh, testCaseId }) => {
               {step.selenium_script_json && (
                 <button
                   type="button"
-                  onClick={() => setShowScript(!showScript)}
+                  onClick={() => setShowScriptModal(true)}
                   className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 font-medium"
                 >
-                  {showScript ? 'Hide Script' : 'View Script'}
+                  View Script
                 </button>
               )}
               
@@ -509,27 +511,12 @@ const TestStepExecutor = ({ step, onStatusUpdate, onRefresh, testCaseId }) => {
         </div>
       )} */}
 
-      {/* Script Editor - Read-only display (only show when not editing) */}
-      {showScript && step.selenium_script && !isEditing && (
-        <div className="mt-3 border-t pt-3">
-          <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-3">
-            <p className="text-xs text-blue-800">
-              <strong>Note:</strong> The Python script below is for <strong>reference only</strong>. 
-              The system executes <strong>JSON commands</strong> (not shown here) which are generated 
-              automatically and optimized for the automation framework. The JSON commands are what actually 
-              control the browser - this Python code is just for human readability.
-            </p>
-          </div>
-          <div className="flex justify-between items-center mb-2">
-            <p className="text-sm font-semibold">Selenium Script (Reference Only)</p>
-          </div>
-          <textarea
-            value={editedScript || 'No script generated yet'}
-            readOnly
-            className="w-full h-64 p-2 border rounded font-mono text-xs bg-gray-50"
-            placeholder="Script will appear here..."
-          />
-        </div>
+      {/* View Script Modal */}
+      {showScriptModal && (
+        <ViewScriptModal 
+          step={step} 
+          onClose={() => setShowScriptModal(false)} 
+        />
       )}
     </div>
   );
